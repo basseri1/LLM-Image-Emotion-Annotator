@@ -7,4 +7,6 @@ requests>=2.31.0
 # For HEIC image support
 pillow-heif>=0.12.0
 pyheif>=0.6.0
-tqdm>=4.0.0 
+tqdm>=4.0.0
+arabic_reshaper
+python-bidi 

@@ -16,6 +16,15 @@ from utils.model_utils import (
 )
 import time
 from tqdm import tqdm
+from rich import print as rprint
+from rich.panel import Panel
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.text import Text
+import arabic_reshaper
+from bidi.algorithm import get_display
+
+console = Console()
 
 def load_named_few_shot_examples():
     """
@@ -52,22 +61,18 @@ def get_temperature_from_user():
     Returns:
         float: The temperature value between 0 and 1
     """
-    print("\n" + "="*80)
-    print("MODEL TEMPERATURE SETTING")
-    print("="*80)
-    print("Temperature controls how deterministic the model responses are:")
-    print("  • Lower temperature (0.0): More focused, consistent, and deterministic responses")
-    print("  • Higher temperature (1.0): More creative, diverse, and exploratory responses")
-    print()
-    print("For emotion classification tasks:")
-    print("  • Lower values (0.0-0.3): Better for consistent, accurate labeling")
-    print("  • Higher values (0.4-0.7): May help when models are being too cautious/refusing")
-    print("  • Very high values (0.8-1.0): Generally not recommended for classification tasks")
-    print()
-    
+    console.print(Panel("[bold yellow]MODEL TEMPERATURE SETTING[/bold yellow]", style="bold blue"))
+    rprint("[bold]Temperature controls how deterministic the model responses are:[/bold]")
+    rprint("  • [green]Lower temperature (0.0):[/green] More focused, consistent, and deterministic responses")
+    rprint("  • [magenta]Higher temperature (1.0):[/magenta] More creative, diverse, and exploratory responses\n")
+    rprint("[bold]For emotion classification tasks:[/bold]")
+    rprint("  • [green]Lower values (0.0-0.3):[/green] Better for consistent, accurate labeling")
+    rprint("  • [yellow]Higher values (0.4-0.7):[/yellow] May help when models are being too cautious/refusing")
+    rprint("  • [red]Very high values (0.8-1.0):[/red] Generally not recommended for classification tasks\n")
     while True:
         try:
-            temp = input("Enter your desired temperature (0.0-1.0) [default: 0.0]: ").strip()
+            temp = Prompt.ask("[bold cyan]Enter your desired temperature (0.0-1.0)[/bold cyan]", default="0.0")
+            temp = temp.strip()
             if temp == "":
                 return 0.0  # Default value
             
@@ -75,20 +80,24 @@ def get_temperature_from_user():
             if 0.0 <= temp <= 1.0:
                 return temp
             else:
-                print("Temperature must be between 0.0 and 1.0. Please try again.")
+                rprint("[red]Temperature must be between 0.0 and 1.0. Please try again.[/red]")
         except ValueError:
-            print("Please enter a valid number between 0.0 and 1.0.")
+            rprint("[red]Please enter a valid number between 0.0 and 1.0.[/red]")
+
+def reshape_arabic(text):
+    reshaped_text = arabic_reshaper.reshape(text)
+    return get_display(reshaped_text)
 
 def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
     # Get temperature setting from user
     temperature = get_temperature_from_user()
-    print(f"Using temperature: {temperature}")
+    rprint(f":thermometer: [bold cyan]Using temperature:[/bold cyan] [yellow]{temperature}[/yellow]")
     
     images = load_images('images')
     total_images = len(images)
-    print(f"Found {total_images} images in the 'images' folder.")
+    rprint(f":framed_picture: [bold green]Found {total_images} images in the 'images' folder.[/bold green]")
     
     few_shot_examples = load_named_few_shot_examples()
     results = []
@@ -96,7 +105,7 @@ def main():
     
     for idx, (img_path, img) in enumerate(tqdm(images, desc='Processing Images', unit='img'), 1):
         img_filename = os.path.basename(img_path)
-        tqdm.write(f"\nProcessing image {idx}/{total_images}: {img_filename}")
+        tqdm.write(f"\n[bold blue]Processing image {idx}/{total_images}: {img_filename}[/bold blue]")
         logging.info(f"Processing image {idx}/{total_images}: {img_path}")
         
         row = {
@@ -114,58 +123,72 @@ def main():
         # GPT-4o
         result = query_gpt4o(img, None, 'zero_shot', temperature=temperature)
         normalized_label = normalize_emotion(result['label'])
-        row['gpt4o_zero_shot'] = normalized_label
-        print(f"Image {idx}/{total_images}: {img_filename}\nModel: gpt-4o\nPrompt type: zero_shot\nLabel: {result['label']}")
+        arabic_label = reshape_arabic(normalized_label)
+        row['gpt4o_zero_shot'] = arabic_label
+        rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gpt-4o[/magenta]\nPrompt type: [yellow]zero_shot[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":robot: GPT-4o Zero-Shot", style="bold blue"))
         if normalized_label != result['label']:
-            print(f"Normalized to: {normalized_label}")
-        print('-' * 40)
+            arabic_normalized_label = reshape_arabic(normalized_label)
+            rprint(f"[yellow]Normalized to:[/yellow] [green]{arabic_normalized_label}[/green]")
+        rprint('-' * 40)
         
         result = query_gpt4o(img, None, 'few_shot', temperature=temperature, few_shot_examples=few_shot_examples)
         normalized_label = normalize_emotion(result['label'])
-        row['gpt4o_few_shot'] = normalized_label
-        print(f"Image {idx}/{total_images}: {img_filename}\nModel: gpt-4o\nPrompt type: few_shot\nLabel: {result['label']}")
+        arabic_label = reshape_arabic(normalized_label)
+        row['gpt4o_few_shot'] = arabic_label
+        rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gpt-4o[/magenta]\nPrompt type: [yellow]few_shot[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":robot: GPT-4o Few-Shot", style="bold magenta"))
         if normalized_label != result['label']:
-            print(f"Normalized to: {normalized_label}")
-        print('-' * 40)
+            arabic_normalized_label = reshape_arabic(normalized_label)
+            rprint(f"[yellow]Normalized to:[/yellow] [green]{arabic_normalized_label}[/green]")
+        rprint('-' * 40)
         
         result = query_gpt4o(img, None, 'chain_of_thought', temperature=temperature)
         normalized_label = normalize_emotion(result['label'])
-        row['gpt4o_cot'] = normalized_label
+        arabic_label = reshape_arabic(normalized_label)
+        row['gpt4o_cot'] = arabic_label
         row['gpt4o_cot_reasoning'] = result.get('reasoning')
-        print(f"Image {idx}/{total_images}: {img_filename}\nModel: gpt-4o\nPrompt type: chain_of_thought\nLabel: {result['label']}")
+        rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gpt-4o[/magenta]\nPrompt type: [yellow]chain_of_thought[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":robot: GPT-4o CoT", style="bold green"))
         if normalized_label != result['label']:
-            print(f"Normalized to: {normalized_label}")
+            arabic_normalized_label = reshape_arabic(normalized_label)
+            rprint(f"[yellow]Normalized to:[/yellow] [green]{arabic_normalized_label}[/green]")
         if result.get('reasoning'):
-            print(f"Reasoning: {result['reasoning']}")
-        print('-' * 40)
+            arabic_reasoning = reshape_arabic(result['reasoning'])
+            rprint(f"[bold blue]Reasoning:[/bold blue] {arabic_reasoning}")
+        rprint('-' * 40)
         
         # Gemini
         result = query_gemini(img, None, 'zero_shot', temperature=temperature)
         normalized_label = normalize_emotion(result['label'])
-        row['gemini_zero_shot'] = normalized_label
-        print(f"Image {idx}/{total_images}: {img_filename}\nModel: gemini-1.5-pro\nPrompt type: zero_shot\nLabel: {result['label']}")
+        arabic_label = reshape_arabic(normalized_label)
+        row['gemini_zero_shot'] = arabic_label
+        rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gemini-1.5-pro[/magenta]\nPrompt type: [yellow]zero_shot[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":crystal_ball: Gemini Zero-Shot", style="bold blue"))
         if normalized_label != result['label']:
-            print(f"Normalized to: {normalized_label}")
-        print('-' * 40)
+            arabic_normalized_label = reshape_arabic(normalized_label)
+            rprint(f"[yellow]Normalized to:[/yellow] [green]{arabic_normalized_label}[/green]")
+        rprint('-' * 40)
         
         result = query_gemini(img, None, 'few_shot', temperature=temperature, few_shot_examples=few_shot_examples)
         normalized_label = normalize_emotion(result['label'])
-        row['gemini_few_shot'] = normalized_label
-        print(f"Image {idx}/{total_images}: {img_filename}\nModel: gemini-1.5-pro\nPrompt type: few_shot\nLabel: {result['label']}")
+        arabic_label = reshape_arabic(normalized_label)
+        row['gemini_few_shot'] = arabic_label
+        rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gemini-1.5-pro[/magenta]\nPrompt type: [yellow]few_shot[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":crystal_ball: Gemini Few-Shot", style="bold magenta"))
         if normalized_label != result['label']:
-            print(f"Normalized to: {normalized_label}")
-        print('-' * 40)
+            arabic_normalized_label = reshape_arabic(normalized_label)
+            rprint(f"[yellow]Normalized to:[/yellow] [green]{arabic_normalized_label}[/green]")
+        rprint('-' * 40)
         
         result = query_gemini(img, None, 'chain_of_thought', temperature=temperature)
         normalized_label = normalize_emotion(result['label'])
-        row['gemini_cot'] = normalized_label
+        arabic_label = reshape_arabic(normalized_label)
+        row['gemini_cot'] = arabic_label
         row['gemini_cot_reasoning'] = result.get('reasoning')
-        print(f"Image {idx}/{total_images}: {img_filename}\nModel: gemini-1.5-pro\nPrompt type: chain_of_thought\nLabel: {result['label']}")
+        rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gemini-1.5-pro[/magenta]\nPrompt type: [yellow]chain_of_thought[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":crystal_ball: Gemini CoT", style="bold green"))
         if normalized_label != result['label']:
-            print(f"Normalized to: {normalized_label}")
+            arabic_normalized_label = reshape_arabic(normalized_label)
+            rprint(f"[yellow]Normalized to:[/yellow] [green]{arabic_normalized_label}[/green]")
         if result.get('reasoning'):
-            print(f"Reasoning: {result['reasoning']}")
-        print('-' * 40)
+            arabic_reasoning = reshape_arabic(result['reasoning'])
+            rprint(f"[bold blue]Reasoning:[/bold blue] {arabic_reasoning}")
+        rprint('-' * 40)
         
         results.append(row)
 
@@ -175,7 +198,7 @@ def main():
         remaining = avg_time * (total_images - idx)
         elapsed_str = time.strftime('%H:%M:%S', time.gmtime(elapsed))
         remaining_str = time.strftime('%H:%M:%S', time.gmtime(remaining))
-        tqdm.write(f"Elapsed time: {elapsed_str} | Estimated remaining: {remaining_str}")
+        tqdm.write(f"[bold green]Elapsed time:[/bold green] {elapsed_str} | [bold yellow]Estimated remaining:[/bold yellow] {remaining_str}")
     # Save results to CSV
     os.makedirs('results', exist_ok=True)
     csv_filename = f"results/results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"

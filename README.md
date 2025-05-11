@@ -1,8 +1,10 @@
 # LLM Image Emotion Annotator (Arabic)
 
-![Build Status](https://img.shields.io/github/actions/workflow/status/username/repo/main.yml?label=build)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+![Python](https://img.shields.io/badge/python-3.8--3.12-blue)
+![Last Commit](https://img.shields.io/github/last-commit/basseri1/LLM-Image-Emotion-Annotator)
+![Emoji](https://img.shields.io/badge/😃-Emotions-orange)
+![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)
 
 Automate the annotation of emotions in images using state-of-the-art language models (OpenAI GPT-4o and Google Gemini 1.5 Pro) with zero-shot, few-shot, and chain-of-thought prompting. The tool outputs emotion labels in Arabic, based on Plutchik's wheel of emotions.
 
