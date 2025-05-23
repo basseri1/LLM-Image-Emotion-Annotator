@@ -1,6 +1,6 @@
 import os
 from PIL import Image
-from utils.image_utils import encode_image_to_base64
+from utils.image_utils import encode_image_to_base64, resize_image_preserve_aspect_ratio
 import openai
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -86,15 +86,18 @@ def build_gpt4o_cot_message(image):
 
 def build_gemini_zero_shot_content(image):
     def image_to_binary(img):
+        # Resize image before converting to binary
+        resized_img = resize_image_preserve_aspect_ratio(img, max_size=1024)
         img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='PNG')
+        resized_img.save(img_byte_arr, format='PNG')
         return img_byte_arr.getvalue()
     img_binary = image_to_binary(image)
     system_prompt = "أنت خبير في علم النفس العاطفي للأطفال."
     user_prompt = "انظر إلى الصورة التالية ثم أجب عن السؤال.\nالسؤال: ما هو الشعور الأساسي الظاهر في هذا المشهد؟\nاختر كلمة واحدة فقط من القائمة التالية :\nسعادة، ثقة، خوف، مفاجأة، حزن، قرف، غضب، ترقب، محايد.\nأجب بالكلمة المختارة فقط دون أي شرح إضافي."
     return [
+        {"role": "model", "parts": [{"text": system_prompt}]},
         {"role": "user", "parts": [
-            {"text": system_prompt + "\n\n" + user_prompt},
+            {"text": user_prompt},
             {"inline_data": {"mime_type": "image/png", "data": img_binary}}
         ]}
     ]
@@ -111,9 +114,13 @@ def build_gemini_few_shot_content(image, few_shot_examples):
     - Even small changes in order, grouping, or newlines can cause refusals or unreliable answers from vision models.
     """
     def image_to_binary(img):
+        # Resize image before converting to binary
+        resized_img = resize_image_preserve_aspect_ratio(img, max_size=1024)
         img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='PNG')
+        resized_img.save(img_byte_arr, format='PNG')
         return img_byte_arr.getvalue()
+    
+    system_prompt = "أنت خبير في علم النفس العاطفي للأطفال."
     content_parts = []
     # Example 1: حزن
     content_parts.append({"text": "أمثلة توضيحية:\nمثال ١"})
@@ -125,21 +132,26 @@ def build_gemini_few_shot_content(image, few_shot_examples):
     content_parts.append({"text": "السؤال: ما الشعور الأساسي؟\nالإجابة: قرف\nالآن حلل الصورة الجديدة وأجب بالشعور الأساسي بكلمة واحدة فقط."})
     content_parts.append({"inline_data": {"mime_type": "image/png", "data": image_to_binary(image)}})
     content_parts.append({"text": "السؤال: ما الشعور الأساسي؟\nاختر من: سعادة، ثقة، خوف، مفاجأة، حزن، قرف، غضب، ترقب، محايد."})
+    
     return [
+        {"role": "model", "parts": [{"text": system_prompt}]},
         {"role": "user", "parts": content_parts}
     ]
 
 def build_gemini_cot_content(image):
     def image_to_binary(img):
+        # Resize image before converting to binary
+        resized_img = resize_image_preserve_aspect_ratio(img, max_size=1024)
         img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='PNG')
+        resized_img.save(img_byte_arr, format='PNG')
         return img_byte_arr.getvalue()
     img_binary = image_to_binary(image)
     system_prompt = "أنت خبير في علم النفس العاطفي للأطفال."
     user_prompt = "انظر إلى هذه الصورة ثم أجب عن المطلوب.\nالخطوات:\n١( فكِّر خطوة بخطوة: صف بإيجاز تعابير الوجه أو لغة الجسد والعناصر السياقية التي تدل على الشعور )سطرين على الأكثر(.\n٢( استنتج الشعور الأساسي الظاهر باستخدام كلمة واحدة فقط من القائمة:\nسعادة، ثقة، خوف، مفاجأة، حزن، قرف، غضب، ترقب، محايد.\n٣( اطبع الإجابة النهائية في سطر منفصل بصيغة:\nالشعور: >الكلمة<\nابدأ الآن."
     return [
+        {"role": "model", "parts": [{"text": system_prompt}]},
         {"role": "user", "parts": [
-            {"text": system_prompt + "\n\n" + user_prompt},
+            {"text": user_prompt},
             {"inline_data": {"mime_type": "image/png", "data": img_binary}}
         ]}
     ]
@@ -202,48 +214,53 @@ def query_gpt4o(image: Image.Image, prompt, prompt_type: str, max_retries=3, tem
             return {'label': None, 'reasoning': None, 'request_json': None}
     return {'label': "لم يتمكن النموذج من تحليل الصورة", 'reasoning': None, 'request_json': None}
 
-def query_gemini(image: Image.Image, prompt, prompt_type: str, temperature=0.0, few_shot_examples=None) -> dict:
-    try:
-        genai.configure(api_key=GOOGLE_API_KEY)
-        model = genai.GenerativeModel('gemini-1.5-pro')
-        if prompt_type == 'zero_shot':
-            contents = build_gemini_zero_shot_content(image)
-        elif prompt_type == 'few_shot':
-            contents = build_gemini_few_shot_content(image, few_shot_examples)
-        elif prompt_type == 'chain_of_thought':
-            contents = build_gemini_cot_content(image)
-        else:
-            raise ValueError(f"Unknown prompt_type: {prompt_type}")
-            
-        # Create a simplified version of the request JSON for logging
-        # Remove binary image data to prevent bloat
-        request_json = []
-        for msg in contents:
-            if 'parts' in msg:
-                simplified_parts = []
-                for part in msg['parts']:
-                    if 'inline_data' in part:
-                        simplified_parts.append({'inline_data': {'mime_type': 'image/png', 'data': '[BINARY_IMAGE_DATA]'}})
-                    else:
-                        simplified_parts.append(part)
-                simplified_msg = {'role': msg['role'], 'parts': simplified_parts}
-                request_json.append(simplified_msg)
+def query_gemini(image: Image.Image, prompt, prompt_type: str, max_retries=3, temperature=0.0, few_shot_examples=None) -> dict:
+    for attempt in range(max_retries + 1):
+        try:
+            genai.configure(api_key=GOOGLE_API_KEY)
+            model = genai.GenerativeModel('gemini-1.5-pro')
+            if prompt_type == 'zero_shot':
+                contents = build_gemini_zero_shot_content(image)
+            elif prompt_type == 'few_shot':
+                contents = build_gemini_few_shot_content(image, few_shot_examples)
+            elif prompt_type == 'chain_of_thought':
+                contents = build_gemini_cot_content(image)
             else:
-                request_json.append(msg)
+                raise ValueError(f"Unknown prompt_type: {prompt_type}")
                 
-        # Convert to JSON string for storage
-        request_json_str = json.dumps(request_json, ensure_ascii=False, indent=2)
-        
-        response = model.generate_content(contents, generation_config={"temperature": temperature})
-        answer = response.text.strip()
-        if prompt_type == 'chain_of_thought':
-            if 'الشعور:' in answer:
-                reasoning, label = answer.rsplit('الشعور:', 1)
-                return {'label': label.strip(), 'reasoning': reasoning.strip(), 'request_json': request_json_str}
+            # Create a simplified version of the request JSON for logging
+            # Remove binary image data to prevent bloat
+            request_json = []
+            for msg in contents:
+                if 'parts' in msg:
+                    simplified_parts = []
+                    for part in msg['parts']:
+                        if 'inline_data' in part:
+                            simplified_parts.append({'inline_data': {'mime_type': 'image/png', 'data': '[BINARY_IMAGE_DATA]'}})
+                        else:
+                            simplified_parts.append(part)
+                    simplified_msg = {'role': msg['role'], 'parts': simplified_parts}
+                    request_json.append(simplified_msg)
+                else:
+                    request_json.append(msg)
+                    
+            # Convert to JSON string for storage
+            request_json_str = json.dumps(request_json, ensure_ascii=False, indent=2)
+            
+            response = model.generate_content(contents, generation_config={"temperature": temperature})
+            answer = response.text.strip()
+            if prompt_type == 'chain_of_thought':
+                if 'الشعور:' in answer:
+                    reasoning, label = answer.rsplit('الشعور:', 1)
+                    return {'label': label.strip(), 'reasoning': reasoning.strip(), 'request_json': request_json_str}
+                else:
+                    return {'label': answer, 'reasoning': None, 'request_json': request_json_str}
             else:
                 return {'label': answer, 'reasoning': None, 'request_json': request_json_str}
-        else:
-            return {'label': answer, 'reasoning': None, 'request_json': request_json_str}
-    except Exception as e:
-        print(f"[ERROR] Gemini API call failed: {e}")
-        return {'label': None, 'reasoning': None, 'request_json': None} 
+        except Exception as e:
+            print(f"[ERROR] Gemini API call failed: {e}")
+            if attempt < max_retries:
+                print(f"Retrying due to network error (attempt {attempt+1}/{max_retries})...")
+                continue
+            return {'label': None, 'reasoning': None, 'request_json': None}
+    return {'label': "لم يتمكن النموذج من تحليل الصورة", 'reasoning': None, 'request_json': None} 
