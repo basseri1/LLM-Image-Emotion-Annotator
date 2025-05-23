@@ -88,6 +88,16 @@ def reshape_arabic(text):
     reshaped_text = arabic_reshaper.reshape(text)
     return get_display(reshaped_text)
 
+def print_tqdm_rich(text):
+    """
+    Helper function to print rich-formatted text with tqdm
+    by capturing console output and then writing plain text to tqdm.
+    """
+    # First try console.out to capture output
+    with console.capture() as capture:
+        console.print(text)
+    tqdm.write(capture.get())
+
 def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
@@ -105,7 +115,7 @@ def main():
     
     for idx, (img_path, img) in enumerate(tqdm(images, desc='Processing Images', unit='img'), 1):
         img_filename = os.path.basename(img_path)
-        tqdm.write(f"\n[bold blue]Processing image {idx}/{total_images}: {img_filename}[/bold blue]")
+        print_tqdm_rich(f"\n[bold blue]Processing image {idx}/{total_images}: {img_filename}[/bold blue]")
         logging.info(f"Processing image {idx}/{total_images}: {img_path}")
         
         row = {
@@ -118,13 +128,20 @@ def main():
             'gemini_few_shot': None,
             'gemini_cot': None,
             'gemini_cot_reasoning': None,
+            'gpt4o_zero_shot_request': None,
+            'gpt4o_few_shot_request': None,
+            'gpt4o_cot_request': None,
+            'gemini_zero_shot_request': None,
+            'gemini_few_shot_request': None,
+            'gemini_cot_request': None,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         # GPT-4o
         result = query_gpt4o(img, None, 'zero_shot', temperature=temperature)
         normalized_label = normalize_emotion(result['label'])
         arabic_label = reshape_arabic(normalized_label)
-        row['gpt4o_zero_shot'] = arabic_label
+        row['gpt4o_zero_shot'] = normalized_label
+        row['gpt4o_zero_shot_request'] = result.get('request_json')
         rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gpt-4o[/magenta]\nPrompt type: [yellow]zero_shot[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":robot: GPT-4o Zero-Shot", style="bold blue"))
         if normalized_label != result['label']:
             arabic_normalized_label = reshape_arabic(normalized_label)
@@ -134,7 +151,8 @@ def main():
         result = query_gpt4o(img, None, 'few_shot', temperature=temperature, few_shot_examples=few_shot_examples)
         normalized_label = normalize_emotion(result['label'])
         arabic_label = reshape_arabic(normalized_label)
-        row['gpt4o_few_shot'] = arabic_label
+        row['gpt4o_few_shot'] = normalized_label
+        row['gpt4o_few_shot_request'] = result.get('request_json')
         rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gpt-4o[/magenta]\nPrompt type: [yellow]few_shot[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":robot: GPT-4o Few-Shot", style="bold magenta"))
         if normalized_label != result['label']:
             arabic_normalized_label = reshape_arabic(normalized_label)
@@ -144,8 +162,9 @@ def main():
         result = query_gpt4o(img, None, 'chain_of_thought', temperature=temperature)
         normalized_label = normalize_emotion(result['label'])
         arabic_label = reshape_arabic(normalized_label)
-        row['gpt4o_cot'] = arabic_label
+        row['gpt4o_cot'] = normalized_label
         row['gpt4o_cot_reasoning'] = result.get('reasoning')
+        row['gpt4o_cot_request'] = result.get('request_json')
         rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gpt-4o[/magenta]\nPrompt type: [yellow]chain_of_thought[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":robot: GPT-4o CoT", style="bold green"))
         if normalized_label != result['label']:
             arabic_normalized_label = reshape_arabic(normalized_label)
@@ -159,7 +178,8 @@ def main():
         result = query_gemini(img, None, 'zero_shot', temperature=temperature)
         normalized_label = normalize_emotion(result['label'])
         arabic_label = reshape_arabic(normalized_label)
-        row['gemini_zero_shot'] = arabic_label
+        row['gemini_zero_shot'] = normalized_label
+        row['gemini_zero_shot_request'] = result.get('request_json')
         rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gemini-1.5-pro[/magenta]\nPrompt type: [yellow]zero_shot[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":crystal_ball: Gemini Zero-Shot", style="bold blue"))
         if normalized_label != result['label']:
             arabic_normalized_label = reshape_arabic(normalized_label)
@@ -169,7 +189,8 @@ def main():
         result = query_gemini(img, None, 'few_shot', temperature=temperature, few_shot_examples=few_shot_examples)
         normalized_label = normalize_emotion(result['label'])
         arabic_label = reshape_arabic(normalized_label)
-        row['gemini_few_shot'] = arabic_label
+        row['gemini_few_shot'] = normalized_label
+        row['gemini_few_shot_request'] = result.get('request_json')
         rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gemini-1.5-pro[/magenta]\nPrompt type: [yellow]few_shot[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":crystal_ball: Gemini Few-Shot", style="bold magenta"))
         if normalized_label != result['label']:
             arabic_normalized_label = reshape_arabic(normalized_label)
@@ -179,8 +200,9 @@ def main():
         result = query_gemini(img, None, 'chain_of_thought', temperature=temperature)
         normalized_label = normalize_emotion(result['label'])
         arabic_label = reshape_arabic(normalized_label)
-        row['gemini_cot'] = arabic_label
+        row['gemini_cot'] = normalized_label
         row['gemini_cot_reasoning'] = result.get('reasoning')
+        row['gemini_cot_request'] = result.get('request_json')
         rprint(Panel(f"[bold]Image {idx}/{total_images}: [cyan]{img_filename}[/cyan]\nModel: [magenta]gemini-1.5-pro[/magenta]\nPrompt type: [yellow]chain_of_thought[/yellow]\nLabel: [green]{arabic_label}[/green]", title=":crystal_ball: Gemini CoT", style="bold green"))
         if normalized_label != result['label']:
             arabic_normalized_label = reshape_arabic(normalized_label)
@@ -198,7 +220,7 @@ def main():
         remaining = avg_time * (total_images - idx)
         elapsed_str = time.strftime('%H:%M:%S', time.gmtime(elapsed))
         remaining_str = time.strftime('%H:%M:%S', time.gmtime(remaining))
-        tqdm.write(f"[bold green]Elapsed time:[/bold green] {elapsed_str} | [bold yellow]Estimated remaining:[/bold yellow] {remaining_str}")
+        print_tqdm_rich(f"[bold green]Elapsed time:[/bold green] {elapsed_str} | [bold yellow]Estimated remaining:[/bold yellow] {remaining_str}")
     # Save results to CSV
     os.makedirs('results', exist_ok=True)
     csv_filename = f"results/results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
@@ -213,6 +235,12 @@ def main():
             'gemini_few_shot',
             'gemini_cot',
             'gemini_cot_reasoning',
+            'gpt4o_zero_shot_request',
+            'gpt4o_few_shot_request',
+            'gpt4o_cot_request',
+            'gemini_zero_shot_request',
+            'gemini_few_shot_request',
+            'gemini_cot_request',
             'timestamp'
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)

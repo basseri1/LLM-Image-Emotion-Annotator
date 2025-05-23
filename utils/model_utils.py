@@ -5,6 +5,7 @@ import openai
 import google.generativeai as genai
 from dotenv import load_dotenv
 import io
+import json
 
 # Load API keys from .env
 load_dotenv()
@@ -154,6 +155,27 @@ def query_gpt4o(image: Image.Image, prompt, prompt_type: str, max_retries=3, tem
                 messages = build_gpt4o_cot_message(image)
             else:
                 raise ValueError(f"Unknown prompt_type: {prompt_type}")
+                
+            # Create a simplified version of the request JSON for logging
+            # Remove base64 image data to prevent bloat
+            request_json = []
+            for msg in messages:
+                if msg['role'] == 'user' and isinstance(msg['content'], list):
+                    # For messages with image content, replace base64 with placeholder
+                    simplified_content = []
+                    for item in msg['content']:
+                        if item['type'] == 'image_url':
+                            simplified_content.append({'type': 'image_url', 'image_url': {'url': '[BASE64_IMAGE_DATA]'}})
+                        else:
+                            simplified_content.append(item)
+                    simplified_msg = {'role': msg['role'], 'content': simplified_content}
+                    request_json.append(simplified_msg)
+                else:
+                    request_json.append(msg)
+            
+            # Convert to JSON string for storage
+            request_json_str = json.dumps(request_json, ensure_ascii=False, indent=2)
+            
             response = openai.chat.completions.create(
                 model="gpt-4o",
                 messages=messages,
@@ -167,18 +189,18 @@ def query_gpt4o(image: Image.Image, prompt, prompt_type: str, max_retries=3, tem
             if prompt_type == 'chain_of_thought':
                 if 'الشعور:' in answer:
                     reasoning, label = answer.rsplit('الشعور:', 1)
-                    return {'label': label.strip(), 'reasoning': reasoning.strip()}
+                    return {'label': label.strip(), 'reasoning': reasoning.strip(), 'request_json': request_json_str}
                 else:
-                    return {'label': answer, 'reasoning': None}
+                    return {'label': answer, 'reasoning': None, 'request_json': request_json_str}
             else:
-                return {'label': answer, 'reasoning': None}
+                return {'label': answer, 'reasoning': None, 'request_json': request_json_str}
         except Exception as e:
             print(f"[ERROR] GPT-4o API call failed: {e}")
             if attempt < max_retries:
                 print(f"Retrying due to error (attempt {attempt+1}/{max_retries})...")
                 continue
-            return {'label': None, 'reasoning': None}
-    return {'label': "لم يتمكن النموذج من تحليل الصورة", 'reasoning': None}
+            return {'label': None, 'reasoning': None, 'request_json': None}
+    return {'label': "لم يتمكن النموذج من تحليل الصورة", 'reasoning': None, 'request_json': None}
 
 def query_gemini(image: Image.Image, prompt, prompt_type: str, temperature=0.0, few_shot_examples=None) -> dict:
     try:
@@ -192,16 +214,36 @@ def query_gemini(image: Image.Image, prompt, prompt_type: str, temperature=0.0, 
             contents = build_gemini_cot_content(image)
         else:
             raise ValueError(f"Unknown prompt_type: {prompt_type}")
+            
+        # Create a simplified version of the request JSON for logging
+        # Remove binary image data to prevent bloat
+        request_json = []
+        for msg in contents:
+            if 'parts' in msg:
+                simplified_parts = []
+                for part in msg['parts']:
+                    if 'inline_data' in part:
+                        simplified_parts.append({'inline_data': {'mime_type': 'image/png', 'data': '[BINARY_IMAGE_DATA]'}})
+                    else:
+                        simplified_parts.append(part)
+                simplified_msg = {'role': msg['role'], 'parts': simplified_parts}
+                request_json.append(simplified_msg)
+            else:
+                request_json.append(msg)
+                
+        # Convert to JSON string for storage
+        request_json_str = json.dumps(request_json, ensure_ascii=False, indent=2)
+        
         response = model.generate_content(contents, generation_config={"temperature": temperature})
         answer = response.text.strip()
         if prompt_type == 'chain_of_thought':
             if 'الشعور:' in answer:
                 reasoning, label = answer.rsplit('الشعور:', 1)
-                return {'label': label.strip(), 'reasoning': reasoning.strip()}
+                return {'label': label.strip(), 'reasoning': reasoning.strip(), 'request_json': request_json_str}
             else:
-                return {'label': answer, 'reasoning': None}
+                return {'label': answer, 'reasoning': None, 'request_json': request_json_str}
         else:
-            return {'label': answer, 'reasoning': None}
+            return {'label': answer, 'reasoning': None, 'request_json': request_json_str}
     except Exception as e:
         print(f"[ERROR] Gemini API call failed: {e}")
-        return {'label': None, 'reasoning': None} 
+        return {'label': None, 'reasoning': None, 'request_json': None} 
