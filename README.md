@@ -116,6 +116,12 @@ You will be prompted to select a temperature value for the models (see [Configur
   - `gemini_few_shot`
   - `gemini_cot`
   - `gemini_cot_reasoning`
+  - `gpt4o_zero_shot_request`
+  - `gpt4o_few_shot_request`
+  - `gpt4o_cot_request`
+  - `gemini_zero_shot_request`
+  - `gemini_few_shot_request`
+  - `gemini_cot_request`
   - `timestamp`
 
 ---
