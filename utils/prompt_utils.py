@@ -11,7 +11,7 @@ EMOTION_LABELS_EN_AR = {
     'Disgust': 'قرف',
     'Anger': 'غضب',
     'Anticipation': 'ترقب',
-    'neutral': 'محايد',
+    'Neutral': 'محايد',
 }
 
 def normalize_emotion(text):

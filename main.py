@@ -71,7 +71,7 @@ def get_temperature_from_user():
     rprint("  • [red]Very high values (0.8-1.0):[/red] Generally not recommended for classification tasks\n")
     while True:
         try:
-            temp = Prompt.ask("[bold cyan]Enter your desired temperature (0.0-1.0)[/bold cyan]", default="default=0.0")
+            temp = Prompt.ask("[bold cyan]Enter your desired temperature (0.0-1.0)[/bold cyan]", default="0.0")
             temp = temp.strip()
             if temp == "":
                 return 0.0  # Default value
@@ -93,7 +93,7 @@ def print_tqdm_rich(text):
     Helper function to print rich-formatted text with tqdm
     by capturing console output and then writing plain text to tqdm.
     """
-    # First try console.out to capture output
+    # Use console.capture() to grab rich output
     with console.capture() as capture:
         console.print(text)
     tqdm.write(capture.get())
