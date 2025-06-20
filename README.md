@@ -6,15 +6,23 @@
 ![Emoji](https://img.shields.io/badge/😃-Emotions-orange)
 ![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)
 
+## Abstract
+
+Emotion recognition capabilities in multimodal AI systems are crucial for developing culturally responsive educational technologies, yet remain underexplored for Arabic language contexts where culturally appropriate learning tools are critically needed. This study evaluates the emotion recognition performance of two advanced multimodal large language models, GPT-4o and Gemini 1.5 Pro, when processing Arabic children's storybook illustrations. We assessed both models across three prompting strategies (zero-shot, few-shot, and chain-of-thought) using 75 images from seven Arabic storybooks, comparing model predictions with human annotations based on Plutchik's emotional framework. GPT-4o consistently outperformed Gemini across all conditions, achieving the highest macro F1-score of 59% with chain-of-thought prompting compared to Gemini's best performance of 43%. Error analysis revealed systematic misclassification patterns, with valence inversions accounting for 60.7% of errors, while both models struggled with culturally nuanced emotions and ambiguous narrative contexts. These findings highlight fundamental limitations in current models' cultural understanding and emphasize the need for culturally sensitive training approaches to develop effective emotion-aware educational technologies for Arabic-speaking learners.
+
+---
+
 Automate the annotation of emotions in images using state-of-the-art language models (OpenAI GPT-4o and Google Gemini 1.5 Pro) with zero-shot, few-shot, and chain-of-thought prompting. The tool outputs emotion labels in Arabic, based on Plutchik's wheel of emotions.
 
 ---
 
 ## Table of Contents
 
+- [Abstract](#abstract)
 - [Emotion Labels](#emotion-labels)
 - [Project Structure](#project-structure)
 - [Setup](#setup)
+- [Testing](#testing)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Output](#output-results-csv)
@@ -79,6 +87,19 @@ utils/
      - `surprise.*`  (for مفاجأة)
      - `disgust.*`   (for قرف)
    - The extension does not matter (e.g., `sadness.png`, `sadness.jpg`, etc.).
+
+---
+
+## Testing
+
+This project includes real unit tests for core logic, such as emotion normalization.
+
+To run the tests, use:
+```bash
+pytest tests/
+```
+
+You should see all tests pass if your environment is set up correctly.
 
 ---
 
@@ -152,4 +173,5 @@ MIT License
 - [OpenAI](https://openai.com/)
 - [Google Gemini](https://ai.google.com/gemini/)
 - [Plutchik's Wheel of Emotions](https://en.wikipedia.org/wiki/Robert_Plutchik)
+- **Image Source:** All original images referenced in this work are from [We Love Reading](https://welovereading.org/), a community-led, shared book-reading program that was developed in Jordan by a Jordanian-run NGO.
 
