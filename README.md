@@ -1,10 +1,10 @@
-# LLM Image Emotion Annotator (Arabic)
+# Deciphering Emotions in Children Storybooks: A Comparative Analysis of Multimodal LLMs in Educational Applications
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 ![Python](https://img.shields.io/badge/python-3.8--3.12-blue)
 ![Last Commit](https://img.shields.io/github/last-commit/basseri1/LLM-Image-Emotion-Annotator)
 ![Emoji](https://img.shields.io/badge/😃-Emotions-orange)
-![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)
+
 
 ## Abstract
 
