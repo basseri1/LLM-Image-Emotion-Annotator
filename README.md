@@ -33,7 +33,7 @@ Automate the annotation of emotions in images using state-of-the-art language mo
 
 | English        | Arabic    |
 |---------------|-----------|
-| Joy           | سعادة     |
+| Happiness           | سعادة     |
 | Trust         | ثقة       |
 | Fear          | خوف       |
 | Surprise      | مفاجأة    |
