@@ -1,14 +1,10 @@
-# Deciphering Emotions in Children Storybooks: A Comparative Analysis of Multimodal LLMs in Educational Applications
+# LLM Image Emotion Annotator
 
 
 ![Python](https://img.shields.io/badge/python-3.8--3.12-blue)
 ![Last Commit](https://img.shields.io/github/last-commit/basseri1/LLM-Image-Emotion-Annotator)
 ![Emoji](https://img.shields.io/badge/😃-Emotions-orange)
 
-
-## Abstract
-
-Emotion recognition capabilities in multimodal AI systems are crucial for developing culturally responsive educational technologies, yet remain underexplored for Arabic language contexts where culturally appropriate learning tools are critically needed. This study evaluates the emotion recognition performance of two advanced multimodal large language models, GPT-4o and Gemini 1.5 Pro, when processing Arabic children's storybook illustrations. We assessed both models across three prompting strategies (zero-shot, few-shot, and chain-of-thought) using 75 images from seven Arabic storybooks, comparing model predictions with human annotations based on Plutchik's emotional framework. GPT-4o consistently outperformed Gemini across all conditions, achieving the highest macro F1-score of 59% with chain-of-thought prompting compared to Gemini's best performance of 43%. Error analysis revealed systematic misclassification patterns, with valence inversions accounting for 60.7% of errors, while both models struggled with culturally nuanced emotions and ambiguous narrative contexts. These findings highlight fundamental limitations in current models' cultural understanding and emphasize the need for culturally sensitive training approaches to develop effective emotion-aware educational technologies for Arabic-speaking learners.
 
 ---
 
